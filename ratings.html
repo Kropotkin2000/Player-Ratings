@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Player Ratings 2025-26</title>
+<style>
+:root { --bg:#0f1117; --bg2:#13161f; --bg3:#1a1d27; --bg4:#1e2130;
+         --border:#2a2d3a; --text:#e0e0e0; --text2:#ccc; --text3:#aaa;
+         --text4:#888; --text5:#666; --tip-bg:#1e2540; --tip-border:#3a4a6a; --tip-text:#cde; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; font-size: 13px; background: var(--bg); color: var(--text); }
+h1 { padding: 12px 16px; font-size: 16px; background: var(--bg3); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+h1 span { color: var(--text4); font-weight: normal; font-size: 13px; }
+#theme-toggle { margin-left: auto; padding: 4px 12px; background: var(--bg4); border: 1px solid var(--border);
+                 color: var(--text3); border-radius: 4px; cursor: pointer; font-size: 12px; }
+#theme-toggle:hover { color: var(--text); border-color: var(--text3); }
+#controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; background: var(--bg2);
+             border-bottom: 1px solid var(--border); }
+.ctrl-group { display: flex; flex-direction: column; gap: 3px; }
+.ctrl-group label { font-size: 11px; color: var(--text4); text-transform: uppercase; letter-spacing: .5px; }
+input[type=text], select { background: var(--bg4); border: 1px solid var(--border); color: var(--text);
+                            padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+input[type=text] { width: 140px; }
+select { width: 140px; }
+.range-group { display: flex; gap: 6px; align-items: center; }
+.range-group input[type=number] { width: 60px; background: var(--bg4); border: 1px solid var(--border);
+                                   color: var(--text); padding: 4px 6px; border-radius: 4px; font-size: 12px; }
+#reset-btn { padding: 5px 14px; background: #2a3a5a; border: 1px solid #3a4a6a; color: #aad;
+              border-radius: 4px; cursor: pointer; font-size: 12px; align-self: flex-end; }
+#reset-btn:hover { background: #3a4a7a; }
+#count { padding: 6px 16px; font-size: 12px; color: var(--text4); background: var(--bg2);
+          border-bottom: 1px solid var(--border); }
+#table-wrap { overflow: auto; height: calc(100vh - 140px); }
+table { border-collapse: collapse; width: 100%; white-space: nowrap; }
+thead th { position: sticky; top: 0; background: var(--bg3); padding: 6px 10px; text-align: right;
+            cursor: pointer; user-select: none; border-bottom: 2px solid var(--border);
+            font-size: 11px; color: var(--text3); letter-spacing: .3px; position: relative; }
+thead th:first-child, thead th:nth-child(2) { text-align: left; }
+thead th.sorted-asc::after { content: " ▲"; color: #6af; }
+thead th.sorted-desc::after { content: " ▼"; color: #6af; }
+tbody tr:hover { background: var(--bg4); }
+tbody tr:nth-child(even) { background: rgba(128,128,128,.04); }
+td { padding: 5px 10px; text-align: right; border-bottom: 1px solid var(--bg3); color: var(--text2); }
+td:first-child { text-align: center; color: var(--text5); width: 40px; }
+td:nth-child(2) { text-align: left; color: var(--text); font-weight: 500; max-width: 180px;
+                   overflow: hidden; text-overflow: ellipsis; }
+td:nth-child(3) { text-align: left; color: var(--text3); }
+td:nth-child(4) { text-align: left; color: var(--text3); max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8) { text-align: left; color: var(--text4); }
+.score-cell { font-weight: 600; color: #7af; }
+.hi { color: #4c4; } .mid { color: #ca4; } .lo { color: #c44; }
+.null { color: var(--text5); }
+#tooltip { position: fixed; display: none; max-width: 280px; background: var(--tip-bg);
+            border: 1px solid var(--tip-border); color: var(--tip-text); font-size: 12px; font-weight: normal;
+            line-height: 1.5; padding: 8px 11px; border-radius: 6px; pointer-events: none;
+            z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,.6); }
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+<h1>Player Ratings <span>2025-26</span><button id="theme-toggle">☀ Light</button></h1>
+<div id="controls">
+  <div class="ctrl-group">
+    <label>Search</label>
+    <input type="text" id="search" placeholder="player / team…">
+  </div>
+  <div class="ctrl-group">
+    <label>League</label>
+    <select id="f-comp"><option value="">All</option>
+      <option>Bundesliga</option><option>Championship</option><option>La Liga</option><option>Ligue 1</option><option>Premier League</option><option>Serie A</option></select>
+  </div>
+  <div class="ctrl-group">
+    <label>Position</label>
+    <select id="f-pos"><option value="">All</option>
+      <option>AM</option><option>DF</option><option>FW</option><option>GK</option><option>MF</option></select>
+  </div>
+  <div class="ctrl-group">
+    <label>Min minutes</label>
+    <div class="range-group">
+      <input type="number" id="f-min-min" value="0" min="0" max="5000" step="90">
+      <span style="color:#555">–</span>
+      <input type="number" id="f-min-max" value="5000" min="0" max="5000" step="90">
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <label>Min score</label>
+    <div class="range-group">
+      <input type="number" id="f-score-min" value="0" min="0" max="100" step="1">
+    </div>
+  </div>
+  <button id="reset-btn">Reset filters</button>
+</div>
+<div id="count"></div>
+<div id="table-wrap"><table id="tbl">
+<thead><tr>
+  <th data-col="_rank" data-tip="Rank by composite score">#</th>
+  <th data-col="player" data-tip="Player name">Player</th><th data-col="nation" data-tip="Nationality (FBref code)">Nation</th><th data-col="team" data-tip="Current club">Team</th><th data-col="comp" data-tip="League / competition">Comp</th><th data-col="pos_group" data-tip="Position group (from WhoScored: DC, MC, FW etc.)">Pos Group</th><th data-col="ws_pos_raw" data-tip="Exact WhoScored position (e.g. AML, DMC, FWR)">Ws Pos Raw</th><th data-col="minutes_total" data-tip="Total minutes played this season">Min</th><th data-col="composite" data-tip="Overall composite score (0–100). Weighted combination of ELO + per-90 stat percentiles, using position-stratified weights learned from player outcome model.">Score</th><th data-col="pct_attack" data-tip="Attacking percentile within position group (0–100). Weighted average of shots, xG, goals, assists percentiles.">ATK%</th><th data-col="pct_defense" data-tip="Defensive percentile within position group (0–100). Weighted average of tackles won and interceptions percentiles.">DEF%</th><th data-col="pct_discipline" data-tip="Discipline percentile (0–100, higher = cleaner). Inverted yellow cards per 90.">DIS%</th><th data-col="xg_p90" data-tip="Expected goals per 90 minutes (Understat). Measures shot quality, not just volume.">xG/90</th><th data-col="xa_p90" data-tip="Expected assists per 90 minutes (Understat). Measures quality of chances created.">xA/90</th><th data-col="goals_p90" data-tip="Goals scored per 90 minutes.">G/90</th><th data-col="assists_p90" data-tip="Assists per 90 minutes.">A/90</th><th data-col="shots_p90" data-tip="Total shots per 90 minutes.">Sh/90</th><th data-col="shots_on_target_p90" data-tip="Shots on target per 90 minutes.">SoT/90</th><th data-col="npxg_p90" data-tip="Non-penalty expected goals per 90 minutes (Understat). Excludes penalties to isolate open-play threat.">npxG/90</th><th data-col="tackles_won_p90" data-tip="Tackles won per 90 minutes (FBref).">Tkl/90</th><th data-col="interceptions_p90" data-tip="Interceptions per 90 minutes (FBref).">Int/90</th><th data-col="aerials_won_p90" data-tip="Aerial duels won per 90 minutes (WhoScored).">Aer/90</th><th data-col="touches_p90" data-tip="Ball touches per 90 minutes (WhoScored). Proxy for involvement / pressing.">Tch/90</th><th data-col="passes_key_p90" data-tip="Key passes per 90 minutes (WhoScored). Passes that directly lead to a shot.">KP/90</th><th data-col="passes_accurate_p90" data-tip="Accurate passes per 90 minutes (WhoScored).">PaAcc/90</th><th data-col="dribbles_won_p90" data-tip="Successful dribbles per 90 minutes (WhoScored).">Drb/90</th><th data-col="dispossessed_p90" data-tip="Times dispossessed per 90 minutes (WhoScored). Lower is better.">Disp/90</th><th data-col="fouled_p90" data-tip="Times fouled per 90 minutes (FBref). Ability to win free kicks / draw contact.">Fld/90</th><th data-col="fouls_p90" data-tip="Fouls committed per 90 minutes (FBref).">Fls/90</th><th data-col="yellows_p90" data-tip="Yellow cards per 90 minutes (FBref).">YC/90</th><th data-col="gk_saves_p90" data-tip="Saves per 90 minutes (GK only, FBref).">Sv/90</th><th data-col="gk_save_pct_mean" data-tip="Save percentage — saves / shots on target faced (GK only, FBref).">Sv%</th><th data-col="gk_clean_sheet_rate" data-tip="Clean sheets per game played (GK only, FBref).">CS%</th><th data-col="elo" data-tip="Player ELO rating — built from match results across all competitions, scaled by league strength. Higher = faced and outperformed stronger opponents. Base = 1500.">ELO</th>
+</tr></thead>
+<tbody id="tbody"></tbody>
+</table></div>
+
+<script src="ratings_data.js"></script>
+<script>
+
+let sortCol = "composite", sortDir = -1;
+let filtered = [...ROWS];
+
+function fmt(v, col) {
+  if (v === null || v === undefined) return '<span class="null">—</span>';
+  if (NUM_COLS.includes(col)) {
+    if (col === "minutes_total" || col === "elo") return Math.round(v).toLocaleString();
+    if (col === "gk_save_pct_mean" || col === "gk_clean_sheet_rate") return (v*100).toFixed(1)+'%';
+    return v.toFixed(2);
+  }
+  return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+}
+
+function scoreClass(v, col) {
+  if (!NUM_COLS.includes(col) || v === null) return '';
+  if (["fouls_p90","yellows_p90","dispossessed_p90"].includes(col)) v = 100 - v;
+  if (col === "composite" || col.startsWith("pct_")) {
+    return v >= 66 ? 'hi' : v >= 33 ? 'mid' : 'lo';
+  }
+  return '';
+}
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  const rows = filtered;
+  tbody.innerHTML = rows.map((r, i) => {
+    const cells = DISP_COLS.map(c => {
+      if (c === '_rank') return `<td>${i+1}</td>`;
+      const v = r[c];
+      const cls = c === 'composite' ? 'score-cell ' + scoreClass(v,c) : scoreClass(v,c);
+      return `<td class="${cls}">${fmt(v,c)}</td>`;
+    });
+    return `<tr>${cells.join('')}</tr>`;
+  }).join('');
+  document.getElementById('count').textContent = `${filtered.length} players`;
+}
+
+function applyFilters() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const comp   = document.getElementById('f-comp').value;
+  const pos    = document.getElementById('f-pos').value;
+  const minMin = +document.getElementById('f-min-min').value || 0;
+  const minMax = +document.getElementById('f-min-max').value || 99999;
+  const scoreMin = +document.getElementById('f-score-min').value || 0;
+
+  filtered = ROWS.filter(r => {
+    if (search && !((r.player||'').toLowerCase().includes(search) ||
+                    (r.team||'').toLowerCase().includes(search))) return false;
+    if (comp && r.comp !== comp) return false;
+    if (pos  && r.pos_group !== pos) return false;
+    const mins = r.minutes_total || 0;
+    if (mins < minMin || mins > minMax) return false;
+    if ((r.composite || 0) < scoreMin) return false;
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    const av = a[sortCol] ?? (sortDir > 0 ? Infinity : -Infinity);
+    const bv = b[sortCol] ?? (sortDir > 0 ? Infinity : -Infinity);
+    return sortDir * (av < bv ? -1 : av > bv ? 1 : 0);
+  });
+
+  render();
+}
+
+// Sort on header click
+document.querySelectorAll('thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) { sortDir *= -1; }
+    else { sortCol = col; sortDir = -1; }
+    document.querySelectorAll('thead th').forEach(t => t.classList.remove('sorted-asc','sorted-desc'));
+    th.classList.add(sortDir > 0 ? 'sorted-asc' : 'sorted-desc');
+    applyFilters();
+  });
+});
+
+// Filter controls
+['search','f-comp','f-pos','f-min-min','f-min-max','f-score-min'].forEach(id => {
+  document.getElementById(id).addEventListener('input', applyFilters);
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('search').value = '';
+  document.getElementById('f-comp').value = '';
+  document.getElementById('f-pos').value = '';
+  document.getElementById('f-min-min').value = 0;
+  document.getElementById('f-min-max').value = 5000;
+  document.getElementById('f-score-min').value = 0;
+  applyFilters();
+});
+
+// Mark composite as initial sort
+document.querySelector('[data-col="composite"]').classList.add('sorted-desc');
+applyFilters();
+
+// ---- Tooltips ----
+const tip = document.getElementById('tooltip');
+document.querySelectorAll('thead th[data-tip]').forEach(th => {
+  th.addEventListener('mouseenter', e => {
+    const text = th.dataset.tip;
+    if (!text) return;
+    tip.textContent = text;
+    tip.style.display = 'block';
+  });
+  th.addEventListener('mousemove', e => {
+    const x = e.clientX + 14, y = e.clientY + 14;
+    const offX = x + 290 > window.innerWidth ? x - 310 : x;
+    tip.style.left = offX + 'px';
+    tip.style.top  = y + 'px';
+  });
+  th.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+});
+
+// ---- Light / dark toggle ----
+const toggleBtn = document.getElementById('theme-toggle');
+let dark = true;
+const darkVars  = {'--bg':'#0f1117','--bg2':'#13161f','--bg3':'#1a1d27','--bg4':'#1e2130',
+                    '--border':'#2a2d3a','--text':'#e0e0e0','--text2':'#ccc','--text3':'#aaa',
+                    '--text4':'#888','--text5':'#666','--tip-bg':'#1e2540','--tip-border':'#3a4a6a','--tip-text':'#cde'};
+const lightVars = {'--bg':'#f5f6fa','--bg2':'#eef0f5','--bg3':'#e4e6ef','--bg4':'#dde0eb',
+                    '--border':'#c8ccdb','--text':'#1a1d27','--text2':'#2a2d3a','--text3':'#444',
+                    '--text4':'#666','--text5':'#999','--tip-bg':'#1e2540','--tip-border':'#3a4a6a','--tip-text':'#cde'};
+function applyTheme(vars) {
+  Object.entries(vars).forEach(([k,v]) => document.documentElement.style.setProperty(k,v));
+}
+toggleBtn.addEventListener('click', () => {
+  dark = !dark;
+  applyTheme(dark ? darkVars : lightVars);
+  toggleBtn.textContent = dark ? '☀ Light' : '☾ Dark';
+});
+applyTheme(darkVars);
+</script>
+</body>
+</html>
