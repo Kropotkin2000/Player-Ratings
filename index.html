@@ -148,6 +148,7 @@ tr.exp .x{float:right;margin-left:10px}
     <p><b>How the parts combine.</b> The four parts are added up, and then the same total for the average Premier League starter in his position is taken away. That average starter is himself well above zero on the parts, which is why the part columns add up to more than the Rating. Example: a winger with league level −0.09, box score +0.49, on pitch +0.05 and finishing +0.02 totals +0.47; the average Premier League winger totals about +0.13; his rating is +0.34.</p>
     <p><b>Keepers</b> are rated on shot-stopping only (goals prevented against the quality of the shots they faced) and are the least certain position: about ±0.07 each on a spread of about 0.03, so only the two ends of the keeper list mean much.</p>
     <p>A league name after a player (for example · Eredivisie) means his rating rests mainly on matches there. Such ratings carry over about as well as a move between two of these leagues, and get a wider ±. "Out 90 d" is the number of days since his last league match.</p>
+    <p><b>Positions.</b> Pos is the position he has played most: the Rating and ranks are for that one. Natural is his Transfermarkt position and 2nd pos a further position he has started in, other than those two; each shows his rating from his minutes in that position only (– under 270 minutes; hover for the minutes; bench appearances count towards Pos). Where all his minutes are in one position it equals the main Rating; a difference means his minutes are split, and a rating from fewer minutes sits closer to average. Filtering by a position also lists players whose natural or second position it is.</p>
     <p id="histnote" hidden><b>Past ratings.</b> Move the slider to see the whole ranking as it stood at the start of any month back to August 2023, and click a player's name for his rating over time. A past rating uses only the matches played before that date. Past ratings have no ±, and the earliest months rest on one year of matches where today's use two, so they move around more.</p>
     <p id="levels"></p>
     <p>Match data: Fotmob. Values: Fotmob's market values, in millions of euros. The ratings are rebuilt every day.</p>
@@ -199,13 +200,16 @@ function controls(){
 }
 function table(){
   const gk=S.pos==='GK',term=norm(S.q.trim());
-  const all=CUR.rows.filter(r=>(!S.prov||r.prov)&&(!S.pos||r.pos===S.pos)&&(!S.leagues.length||S.leagues.includes(r.league))&&(!S.nat||r.nat===S.nat)&&(!term||norm(r.name).includes(term)||norm(r.team).includes(term)));
+  const all=CUR.rows.filter(r=>(!S.prov||r.prov)&&(!S.pos||r.pos===S.pos||r.npos===S.pos||r.p2===S.pos)&&(!S.leagues.length||S.leagues.includes(r.league))&&(!S.nat||r.nat===S.nat)&&(!term||norm(r.name).includes(term)||norm(r.team).includes(term)));
   const val=r=>S.k==='g'?r.v:S.k==='fin'?(r.pos==='GK'?r.ss:r.fin):r[S.k];
   if(S.k==='name'||S.k==='team')all.sort((a,b)=>S.dir*String(a[S.k]).localeCompare(String(b[S.k])));
   else all.sort((a,b)=>{const x=val(a),y=val(b);if(x==null&&y==null)return a.rank-b.rank;if(x==null)return 1;if(y==null)return -1;return S.dir*(x-y)||a.rank-b.rank});
   const th=(k,label,cls,title)=>`<th class="${cls||''}${k&&S.k===k?' sorted':''}"${k?` data-k="${k}" tabindex="0"`:''}${title?` title="${esc(title)}"`:''}>${label}${k&&S.k===k?(S.dir<0?' ▾':' ▴'):''}</th>`;
   $('#head').innerHTML='<tr>'+th('rank','Rank','r','Among all ranked players')+th('rpos','Pos. rank','r l','Rank among players of his position')+th('name','Player')
-    +th('','Nationality','l')+th('team','Team','s')+th('','League','m')+th('','Pos','s')+th('age','Age','r s')
+    +th('','Nationality','l')+th('team','Team','s')+th('','League','m')+th('','Pos','s','Position played most: the Rating and ranks are for this one')
+    +th('vn','Natural','m','Natural position (Transfermarkt) and his rating from the matches he started there')
+    +th('v2','2nd pos','m','A further position he has started in (270+ min and 15% of his starts), other than Pos and Natural, and his rating from those starts')
+    +th('age','Age','r s')
     +th('mv','Value €m','r m',"Fotmob's market value, in millions of euros")
     +th('v','Rating','r','xG difference per 90 against the average Premier League starter of his position')
     +th('se','±','r','Uncertainty of the rating (one standard error)')
@@ -215,16 +219,22 @@ function table(){
         :th('box','Box score','r m','What his own stats per 90 are worth, for his position')+th('on','On pitch','r m',"How his team's xG moves with him on the pitch, beyond what the box score explains")+th('fin','Finishing / saves','r l','Outfield: goals above his xG per 90, shrunk. Keepers: goals prevented per 90, shrunk'))
     +th('min','Minutes','r xl','Minutes in the last two years, all competitions')+'</tr>';
   const rows=all.slice(0,S.n);
+  // Natural = Transfermarkt's position, 2nd = a further position he has started in; each with his rating from his
+  // minutes there (– under 270 minutes), minutes on hover. Older snapshots have neither field: –.
+  const split=(p,v,m,tm)=>{if(!p)return '<td class="m">–</td>';
+    const tip=`${tm?'Transfermarkt: '+tm+'. ':''}${m==null?'':'Minutes there: '+fmt(m)+', league matches, last two years. '}${v==null?'Under 270 minutes there: no rating.':'Rating from those minutes only.'}`;
+    return `<td class="m" style="white-space:nowrap" title="${esc(tip)}">${PN[p]||esc(p)} ${sg(v)}</td>`};
   $('#body').innerHTML=rows.map(r=>{const k=r.pos==='GK';
+    const nat=k?'<td class="m">–</td>':split(r.npos,r.vn,r.mn,r.ntm),sec=k||r.p2===r.pos?'<td class="m">–</td>':split(r.p2,r.v2,r.m2,null);
     const tail=gk?`<td class="r m">${sg(r.ss)}</td><td class="r m">${r.shots==null?'–':fmt(r.shots)}</td><td class="r l">${sg(r.gp,1)}</td>`
       :`<td class="r m">${k?'–':sg(r.box)}</td><td class="r m">${k?'–':sg(r.on)}</td><td class="r l">${sg(k?r.ss:r.fin)}</td>`;
     const nm=HIST.length?`<button class="pl" data-id="${r.id}" aria-expanded="${S.open===r.id}" title="Show his rating over time">${esc(r.name)}</button>`:`<b>${esc(r.name)}</b>`;
     return `<tr><td class="r">${fmt(r.rank)}</td><td class="r l">${fmt(r.rpos)}</td>
       <td class="cut name">${nm}${r.prov?` <span class="meta" title="Rated mainly on matches in ${esc(rated(r))}">· ${esc(rated(r))}</span>`:''}${r.out>60?` <span class="meta">· out ${r.out} d</span>`:''}<div class="sub">${esc(r.team)} · ${PN[r.pos]||esc(r.pos)}${r.age==null?'':' · '+fmt(r.age)}</div></td>
-      <td class="cut l">${esc(r.nat||'–')}</td><td class="cut s" title="${esc(r.team)}">${esc(r.team)}</td><td class="m">${esc(r.league)}</td><td class="s">${PN[r.pos]||esc(r.pos)}</td><td class="r s">${fmt(r.age)}</td>
+      <td class="cut l">${esc(r.nat||'–')}</td><td class="cut s" title="${esc(r.team)}">${esc(r.team)}</td><td class="m">${esc(r.league)}</td><td class="s">${PN[r.pos]||esc(r.pos)}</td>${nat}${sec}<td class="r s">${fmt(r.age)}</td>
       <td class="r m">${mv(r)}</td><td class="r">${bar(r.v)}<b>${sg(r.v)}</b></td><td class="r">${r.se==null?'–':Number(r.se).toFixed(2)}</td><td class="r s">${sg(r.v*38,1)}</td>
       <td class="r xl">${sg(r.lg)}</td>${tail}<td class="r xl">${fmt(r.min)}</td></tr>`
-      +(S.open===r.id?'<tr class="exp"><td colspan="17"><div id="card"></div></td></tr>':'')}).join('')||'<tr><td colspan="17" class="empty">No players match these filters.</td></tr>';
+      +(S.open===r.id?'<tr class="exp"><td colspan="19"><div id="card"></div></td></tr>':'')}).join('')||'<tr><td colspan="19" class="empty">No players match these filters.</td></tr>';
   $('#foot').innerHTML=all.length>rows.length?`<span>Showing ${rows.length} of ${all.length.toLocaleString('en-GB')} players.</span><span class="sp"></span><button class="chip" id="more">Show 200 more</button><button class="chip" id="all">Show all</button>`:`<span>${all.length.toLocaleString('en-GB')} players.</span>`;
   if($('#more'))$('#more').onclick=()=>{S.n+=200;table()};
   if($('#all'))$('#all').onclick=()=>{S.n=1e9;table()};
